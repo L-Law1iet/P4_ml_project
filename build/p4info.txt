@@ -1,0 +1,112 @@
+pkg_info {
+  arch: "v1model"
+}
+registers {
+  preamble {
+    id: 378142968
+    name: "ingress.syn_counter"
+    alias: "syn_counter"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 32
+      }
+    }
+  }
+  size: 1
+}
+registers {
+  preamble {
+    id: 371726079
+    name: "ingress.fin_counter"
+    alias: "fin_counter"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 32
+      }
+    }
+  }
+  size: 1
+}
+registers {
+  preamble {
+    id: 372617042
+    name: "ingress.pkt_counter"
+    alias: "pkt_counter"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 32
+      }
+    }
+  }
+  size: 1
+}
+registers {
+  preamble {
+    id: 377612942
+    name: "ingress.pkt_length"
+    alias: "pkt_length"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 32
+      }
+    }
+  }
+  size: 1
+}
+digests {
+  preamble {
+    id: 402184575
+    name: "mac_learn_digest_t"
+    alias: "mac_learn_digest_t"
+  }
+  type_spec {
+    struct {
+      name: "mac_learn_digest_t"
+    }
+  }
+}
+type_info {
+  structs {
+    key: "mac_learn_digest_t"
+    value {
+      members {
+        name: "num_syn"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
+      members {
+        name: "pkt_counter"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
+      members {
+        name: "pkt_length"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
+    }
+  }
+}
