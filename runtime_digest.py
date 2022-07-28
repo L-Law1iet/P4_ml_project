@@ -4,13 +4,16 @@ mininet >
 h1 route add default gw 10.0.0.254 dev h1-eth0
 h1 arp -i h1-eth0 -s 10.0.0.254 00:00:0a:00:00:fe
 """
+from http.client import LOCKED
 import logging
+from multiprocessing import Lock
 import os
 import queue
 import sys
 import threading
 import traceback
 import re
+import time
 
 import google.protobuf.text_format
 from google.rpc import status_pb2, code_pb2
@@ -25,13 +28,18 @@ P4BIN = os.getenv('P4BIN', 'build/bmv2.json')
 passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
+count_length = 0
+count_iat = 0
+count_packets = 0
+lock = threading.Lock()
 
 logging.basicConfig(
-        format='%(asctime)s.%(msecs)03d: %(process)d: %(levelname).1s/%(name)s: %(filename)s:%(lineno)d: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO)
+    format='%(asctime)s.%(msecs)03d: %(process)d: %(levelname).1s/%(name)s: %(filename)s:%(lineno)d: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
+
 
 def gen_handshake(election_id):
     req = p4runtime_pb2.StreamMessageRequest()
@@ -42,61 +50,71 @@ def gen_handshake(election_id):
     eid.low = election_id[1]
     return req
 
+
 def check_handshake():
     rep = recv_queue.get(timeout=2)
     if rep is None:
         logging.critical("Failed to establish session with server")
         sys.exit(1)
     is_primary = (rep.arbitration.status.code == code_pb2.OK)
-    logging.debug("Session established, client is '%s'", 'primary' if is_primary else 'backup')
+    logging.debug("Session established, client is '%s'",
+                  'primary' if is_primary else 'backup')
     if not is_primary:
-        logging.info("You are not the primary client, you only have read access to the server")
+        logging.info(
+            "You are not the primary client, you only have read access to the server")
     else:
         logging.info('You are primary')
 
-def show_state(response):
+
+def show_state(response, lock):
     response_str = str(response)
     tokens = response_str.split(" ")
-    get_data = 0;
+    get_data = 0
     data = []
-    
+
     for token in tokens:
         if get_data == 1:
-            #data.append(token)
+            # data.append(token)
             value_str = token[1:len(token)-2]
             value_str = value_str.encode('utf-8').decode('unicode_escape')
-            value_int = int.from_bytes(bytes(value_str,'latin_1'), byteorder="big")
+            value_int = int.from_bytes(
+                bytes(value_str, 'latin_1'), byteorder="big")
             data.append(value_int)
             get_data = 0
         if token == "bitstring:":
             get_data = 1
 
+    lock.acquire()
     i = 0
+    global count_length
+    global count_iat
+    global count_packets
+    count_packets = count_packets + 1
     for state in data:
         if i == 0:
-            print("The number of SYN: ", state)
+            count_length = count_length + state
         elif i == 1:
-            print("The number of packets: ", state)
-        elif i == 2:
-            print("The total length of packets: ", state)
-
+            count_iat = count_iat + state
         i = i + 1
+    lock.release()
+
 
 def stream(stub):
-    def recv_handler(responses):
+    def recv_handler(responses, lock):
         for response in responses:
-            logging.info('Receive response')
-            #logging.info(response)
-            show_state(response)
+            # logging.info('Receive response')
+            # logging.info(response)
+            show_state(response, lock)
             recv_queue.put(response)
     responses = stub.StreamChannel(iter(send_queue.get, None))
     logging.info('created channel')
-    recv_thread = threading.Thread(target=recv_handler, args=(responses,))
+    recv_thread = threading.Thread(target=recv_handler, args=(responses, lock))
     recv_thread.start()
     send_queue.put(gen_handshake(election_id=(0, 1)))
     check_handshake()
     logging.info('handshaked')
     return recv_thread
+
 
 def insert_digest(stub, digest_id):
     req = p4runtime_pb2.WriteRequest()
@@ -112,6 +130,7 @@ def insert_digest(stub, digest_id):
     digest_entry.config.max_list_size = 1
     digest_entry.config.ack_timeout_ns = 0
     response = stub.Write(req)
+
 
 def set_fwd_pipe_config(stub, p4info_path, bin_path):
     req = p4runtime_pb2.SetForwardingPipelineConfigRequest()
@@ -130,6 +149,7 @@ def set_fwd_pipe_config(stub, p4info_path, bin_path):
             req.config.p4_device_config = f2.read()
     return stub.SetForwardingPipelineConfig(req)
 
+
 def client_main(stub):
     logging.info('SetForwardingPipelineConfig...')
     set_fwd_pipe_config(stub, P4INFO, P4BIN)
@@ -138,15 +158,40 @@ def client_main(stub):
     insert_digest(stub, digest_id)
     logging.info('insert_digest passed')
 
+
+def time_window(lock):
+    while True:
+        time.sleep(2)
+        lock.acquire()
+        global count_length
+        global count_iat
+        global count_packets
+        if count_length != 0:
+            count_length = count_length / count_packets
+            print("The average length per %d packets : %d " %
+                  (count_packets, count_length))
+            count_iat = count_iat / count_packets
+            print("The average IAT per %d packets : %d " %
+                  (count_packets, count_iat))
+            count_packets = 0
+            count_length = 0
+            count_iat = 0
+        lock.release()
+
+
 with grpc.insecure_channel('localhost:50001') as channel:
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)
+    timw_thread = threading.Thread(target=time_window, args=[lock])
+    timw_thread.start()
     recv_t = stream(stub)
     try:
         client_main(stub)
         while True:
             cmd = input('> ')
-            if cmd.lower() == 'exit': break
-            if cmd.lower() == 'quit': break
+            if cmd.lower() == 'exit':
+                break
+            if cmd.lower() == 'quit':
+                break
     except (KeyboardInterrupt, EOFError):
         pass
     except:

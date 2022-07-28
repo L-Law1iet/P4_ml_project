@@ -45,7 +45,7 @@ control ingress(inout headers_t hdr,
         table0_control.apply(hdr, local_metadata, standard_metadata);
         host_meter_control.apply(hdr, local_metadata, standard_metadata);
         wcmp_control.apply(hdr, local_metadata, standard_metadata);
-     }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -53,8 +53,8 @@ control ingress(inout headers_t hdr,
 //------------------------------------------------------------------------------
 
 control egress(inout headers_t hdr,
-               inout local_metadata_t local_metadata,
-               inout standard_metadata_t standard_metadata) {
+                inout local_metadata_t local_metadata,
+                inout standard_metadata_t standard_metadata) {
 
     apply {
         port_counters_egress.apply(hdr, standard_metadata);
@@ -68,8 +68,8 @@ control egress(inout headers_t hdr,
 //------------------------------------------------------------------------------
 
 V1Switch(parser_impl(),
-         verify_checksum_control(),
-         ingress(),
-         egress(),
-         compute_checksum_control(),
-         deparser()) main;
+        verify_checksum_control(),
+        ingress(),
+        egress(),
+        compute_checksum_control(),
+        deparser()) main;

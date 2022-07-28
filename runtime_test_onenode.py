@@ -1,10 +1,10 @@
 import p4runtime_sh.shell as sh
 
 sh.setup(
-    device_id=1,
-    grpc_addr='localhost:50001',
-    election_id=(0, 1), # (high, low)
-    config=sh.FwdPipeConfig('build/p4info.txt', 'build/bmv2.json')
+   device_id=1,
+   grpc_addr='localhost:50001',
+   election_id=(0, 1), # (high, low)
+   config=sh.FwdPipeConfig('build/p4info.txt', 'build/bmv2.json')
 )
 
 te = sh.TableEntry("ingress.table0_control.table0")(

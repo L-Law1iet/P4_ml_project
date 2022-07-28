@@ -60,10 +60,12 @@ struct headers_t {
 struct mac_learn_digest_t {
     //bit<48> src_addr;
     //bit<9>  ingress_port;
-    bit<32> num_syn;
+    //bit<32> num_syn;
     //bit<32> num_fin;
-    bit<32> pkt_counter;
-    bit<32> pkt_length;
+    //bit<32> pkt_counter;
+    //bit<32> pkt_length;
+    bit<32> curr_pcaket_length;
+    bit<48> curr_interval;
 }
 struct local_metadata_t { }
 
@@ -120,58 +122,60 @@ control ingress(
     register<bit<32>>(1) syn_counter;
     register<bit<32>>(1) fin_counter;
     register<bit<32>>(1) pkt_counter;
-    register<bit<32>>(1) pkt_length;
+    register<bit<48>>(1) last_time_reg;
+    
 
     apply {
         // passed
         //digest<mac_learn_digest_t>(1, {hdr.ethernet.src_addr, st_md.ingress_port});
 	bit<32> syn_value;
-        bit<32> fin_value;
+    bit<32> fin_value;
 	bit<32> pkt_counter_value;
-	bit<32> pkt_length_value;
-	bit<32> avg_length;
-        syn_counter.read(syn_value, 0);
-        fin_counter.read(fin_value, 0);
+    bit<32> curr_pcaket_length;
+    bit<48> last_time;
+    bit<48> curr_interval;
+
+    syn_counter.read(syn_value, 0);
+    fin_counter.read(fin_value, 0);
 	pkt_counter.read(pkt_counter_value, 0);
-	pkt_length.read(pkt_length_value, 0);
+    last_time_reg.read(last_time, 0);
 
 	pkt_counter_value = pkt_counter_value + 1;
-	pkt_length_value = pkt_length_value + st_md.packet_length;
-
 	pkt_counter.write(0, pkt_counter_value);
-	pkt_length.write(0, pkt_length_value);
+    curr_pcaket_length = st_md.packet_length;
 
-	
+    //initialize interval of current packet and last packet
+    curr_interval = 0;
+    if(pkt_counter_value >= 2){
+        curr_interval = st_md.ingress_global_timestamp - last_time;
+    }
+	last_time_reg.write(0, st_md.ingress_global_timestamp);
 
 	if(hdr.tcp.isValid()){
             //bit<32> syn_value;
             //bit<32> fin_value;
             //syn_counter.read(syn_value, 0);
             //fin_counter.read(fin_value, 0);
-	    //digest<mac_learn_digest_t>(1, {syn_value, fin_value});
+	        //digest<mac_learn_digest_t>(1, {syn_value, fin_value});
 
             if ((hdr.tcp.ctrl & 0b000010) >> 1 == 1) {
                 syn_value = syn_value + 1;
                 syn_counter.write(0, syn_value);
                 //digest<statistic_t>(1, {syn_value, fin_value});
-
-
-		digest<mac_learn_digest_t>(1, {syn_value, pkt_counter_value, pkt_length_value});
             }
             if ((hdr.tcp.ctrl & 0b000001) == 1) {
                 fin_value = fin_value + 1;
                 fin_counter.write(0, fin_value);
                 //digest<statistic_t>(1, {syn_value, fin_value});
-		//digest<mac_learn_digest_t>(1, {syn_value, fin_value});
+		        //digest<mac_learn_digest_t>(1, {syn_value, fin_value});
             }
         }
-
-
+    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval});
 	if(st_md.ingress_port == 1){
-	    st_md.egress_spec = 2;
+        st_md.egress_spec = 2;
 	}
 	if(st_md.ingress_port == 2){
-	    st_md.egress_spec = 1;
+        st_md.egress_spec = 1;
 	}
     }
 }
@@ -192,9 +196,9 @@ control no_compute_checksum(
     apply { }
 }
 V1Switch(parser_impl(),
-         no_verify_checksum(),
-         ingress(),
-         egress(),
-         no_compute_checksum(),
-         deparser()
+        no_verify_checksum(),
+        ingress(),
+        egress(),
+        no_compute_checksum(),
+        deparser()
 ) main;

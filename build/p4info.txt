@@ -48,14 +48,14 @@ registers {
 }
 registers {
   preamble {
-    id: 377612942
-    name: "ingress.pkt_length"
-    alias: "pkt_length"
+    id: 371323475
+    name: "ingress.last_time_reg"
+    alias: "last_time_reg"
   }
   type_spec {
     bitstring {
       bit {
-        bitwidth: 32
+        bitwidth: 48
       }
     }
   }
@@ -78,7 +78,7 @@ type_info {
     key: "mac_learn_digest_t"
     value {
       members {
-        name: "num_syn"
+        name: "curr_pcaket_length"
         type_spec {
           bitstring {
             bit {
@@ -88,21 +88,11 @@ type_info {
         }
       }
       members {
-        name: "pkt_counter"
+        name: "curr_interval"
         type_spec {
           bitstring {
             bit {
-              bitwidth: 32
-            }
-          }
-        }
-      }
-      members {
-        name: "pkt_length"
-        type_spec {
-          bitstring {
-            bit {
-              bitwidth: 32
+              bitwidth: 48
             }
           }
         }

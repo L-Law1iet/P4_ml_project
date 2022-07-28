@@ -12,16 +12,16 @@ Mininet.build = build
 
 class MyTopo( Topo ):
    def build( self ):
-       "Create custom topo."
-       # Add hosts and switches. h1 -- s1 -- s2 -- h2
-       h1 = self.addHost('h1', ip='10.0.1.1/24', mac='00:00:00:00:00:01')
-       h2 = self.addHost('h2', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
-       s1 = self.addSwitch('s1')
-       s2 = self.addSwitch('s2')
-       # Add links
-       self.addLink(h1, s1)
-       self.addLink(s1, s2)
-       self.addLink(s2, h2)
+      "Create custom topo."
+      # Add hosts and switches. h1 -- s1 -- s2 -- h2
+      h1 = self.addHost('h1', ip='10.0.1.1/24', mac='00:00:00:00:00:01')
+      h2 = self.addHost('h2', ip='10.0.1.2/24', mac='00:00:00:00:00:02')
+      s1 = self.addSwitch('s1')
+      s2 = self.addSwitch('s2')
+      # Add links
+      self.addLink(h1, s1)
+      self.addLink(s1, s2)
+      self.addLink(s2, h2)
 
 topos = { 'mytopo': ( lambda: MyTopo() ) }
 
