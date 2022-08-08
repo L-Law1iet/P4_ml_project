@@ -40,6 +40,7 @@ header tcp_t {
     bit<16> window;
     bit<16> checksum;
     bit<16> urgent_ptr;
+    bit<8>  flags;
 }
 
 header udp_t {
@@ -66,6 +67,8 @@ struct mac_learn_digest_t {
     //bit<32> pkt_length;
     bit<32> curr_pcaket_length;
     bit<48> curr_interval;
+    bit<8> syn_value;
+    bit<8> fin_value;
 }
 struct local_metadata_t { }
 
@@ -119,24 +122,18 @@ control ingress(
         inout local_metadata_t user_md,
         inout standard_metadata_t st_md) {
 
-    register<bit<32>>(1) syn_counter;
-    register<bit<32>>(1) fin_counter;
     register<bit<32>>(1) pkt_counter;
     register<bit<48>>(1) last_time_reg;
     
 
     apply {
-        // passed
-        //digest<mac_learn_digest_t>(1, {hdr.ethernet.src_addr, st_md.ingress_port});
-	bit<32> syn_value;
-    bit<32> fin_value;
+	bit<8> syn_value;
+    bit<8> fin_value;
 	bit<32> pkt_counter_value;
     bit<32> curr_pcaket_length;
     bit<48> last_time;
     bit<48> curr_interval;
 
-    syn_counter.read(syn_value, 0);
-    fin_counter.read(fin_value, 0);
 	pkt_counter.read(pkt_counter_value, 0);
     last_time_reg.read(last_time, 0);
 
@@ -151,26 +148,17 @@ control ingress(
     }
 	last_time_reg.write(0, st_md.ingress_global_timestamp);
 
+    syn_value = 0;
+    fin_value = 0;
 	if(hdr.tcp.isValid()){
-            //bit<32> syn_value;
-            //bit<32> fin_value;
-            //syn_counter.read(syn_value, 0);
-            //fin_counter.read(fin_value, 0);
-	        //digest<mac_learn_digest_t>(1, {syn_value, fin_value});
-
-            if ((hdr.tcp.ctrl & 0b000010) >> 1 == 1) {
-                syn_value = syn_value + 1;
-                syn_counter.write(0, syn_value);
-                //digest<statistic_t>(1, {syn_value, fin_value});
+            if (hdr.tcp.flags == 02) {
+                syn_value = 1;
             }
-            if ((hdr.tcp.ctrl & 0b000001) == 1) {
-                fin_value = fin_value + 1;
-                fin_counter.write(0, fin_value);
-                //digest<statistic_t>(1, {syn_value, fin_value});
-		        //digest<mac_learn_digest_t>(1, {syn_value, fin_value});
+            if (hdr.tcp.flags == 01) {
+                fin_value = 1;
             }
         }
-    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval});
+    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, syn_value, fin_value});
 	if(st_md.ingress_port == 1){
         st_md.egress_spec = 2;
 	}

@@ -21,6 +21,26 @@ import grpc
 from p4.v1 import p4runtime_pb2
 from p4.v1 import p4runtime_pb2_grpc
 
+import csv
+
+import pandas as pd
+import atexit
+
+features = ({
+    'flow duration':[],
+    'packet count':[],
+    'avg pkt_length':[],
+    'max pkt_length':[],
+    'min pkt_length':[],
+    'average iat':[],
+    'max iat':[],
+    'min iat':[],
+    'syn count':[],
+    'fin count':[],
+            })
+df = pd.DataFrame(features)
+print(df)
+
 # parameters
 device_id = 1
 P4INFO = os.getenv('P4INFO', 'build/p4info.txt')
@@ -31,6 +51,14 @@ digest_id = passed_digest_id
 count_length = 0
 count_iat = 0
 count_packets = 0
+count_syn = 0
+count_fin = 0
+max_length = 0
+min_length = 0
+max_iat = 0
+min_iat = 0
+first_packet = True
+win_time = 2 #time window interval
 lock = threading.Lock()
 
 logging.basicConfig(
@@ -40,6 +68,10 @@ logging.basicConfig(
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
 
+def write_csv():
+    df.to_csv("dataset.csv")
+
+atexit.register(write_csv)
 
 def gen_handshake(election_id):
     req = p4runtime_pb2.StreamMessageRequest()
@@ -86,15 +118,34 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length
-    global count_iat
-    global count_packets
+    global count_length, count_iat, count_packets, count_syn, count_fin, max_length, min_length, max_iat, min_iat
+    global first_packet
     count_packets = count_packets + 1
     for state in data:
         if i == 0:
+            if first_packet:
+                max_length = state
+                min_length = state
+                first_packet = False
+            if state < min_length:
+                min_length = state
+            if state > max_length:
+                max_length = state
             count_length = count_length + state
         elif i == 1:
+            if first_packet:
+                max_iat = state
+                min_iat = state
+                first_packet = False
+            if state < min_iat:
+                min_iat = state
+            if state > max_iat:
+                max_iat = state
             count_iat = count_iat + state
+        elif i == 2:
+            count_syn = count_syn + state
+        elif i == 3:
+            count_fin = count_fin + state
         i = i + 1
     lock.release()
 
@@ -161,23 +212,50 @@ def client_main(stub):
 
 def time_window(lock):
     while True:
-        time.sleep(2)
+        global win_time
+        time.sleep(win_time)
         lock.acquire()
-        global count_length
-        global count_iat
-        global count_packets
+        global count_length, count_iat, count_packets, count_syn, count_fin, max_length, min_length, max_iat, min_iat
+        global first_packet
         if count_length != 0:
-            count_length = count_length / count_packets
-            print("The average length per %d packets : %d " %
-                  (count_packets, count_length))
-            count_iat = count_iat / count_packets
-            print("The average IAT per %d packets : %d " %
-                  (count_packets, count_iat))
+            global df
+            new_row = {'flow duration':count_length, 'packet count':count_packets, 'avg pkt_length':count_length / count_packets
+            , 'max pkt_length':max_length, 'min pkt_length':min_length, 'average iat':count_iat / count_packets, 'max iat':max_iat
+            , 'min iat':min_iat, 'syn count':count_syn, 'fin count':count_fin}
+            # rows = pd.DataFrame(new_row)
+            # df = pd.concat([df,rows])
+            df = df.append(new_row, ignore_index=True)
+            print("The total length per %d seconds : %d " %
+                  (win_time, count_length))
+            print("The total packets per %d seconds : %d " %
+                  (win_time, count_packets))
+            print("The average length per %d seconds : %d " %
+                  (win_time, count_length / count_packets))
+            print("The MAX length per %d seconds : %d " %
+                  (win_time, max_length))
+            print("The min length per %d seconds : %d " %
+                  (win_time, min_length))
+            print("The average IAT per %d seconds : %d " %
+                  (win_time, count_iat / count_packets))
+            print("The MAX IAT per %d seconds : %d " %
+                  (win_time, max_iat))
+            print("The min IAT per %d seconds : %d " %
+                  (win_time, min_iat))
+            print("The SYN flags per %d seconds : %d " %
+                  (win_time, count_syn))
+            print("The FIN flags per %d seconds : %d " %
+                  (win_time, count_fin))
             count_packets = 0
             count_length = 0
             count_iat = 0
+            count_syn = 0
+            count_fin = 0
+            max_length = 0
+            min_length = 0
+            max_iat = 0
+            min_iat = 0
+            first_packet = True
         lock.release()
-
 
 with grpc.insecure_channel('localhost:50001') as channel:
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)

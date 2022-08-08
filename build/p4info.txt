@@ -3,36 +3,6 @@ pkg_info {
 }
 registers {
   preamble {
-    id: 378142968
-    name: "ingress.syn_counter"
-    alias: "syn_counter"
-  }
-  type_spec {
-    bitstring {
-      bit {
-        bitwidth: 32
-      }
-    }
-  }
-  size: 1
-}
-registers {
-  preamble {
-    id: 371726079
-    name: "ingress.fin_counter"
-    alias: "fin_counter"
-  }
-  type_spec {
-    bitstring {
-      bit {
-        bitwidth: 32
-      }
-    }
-  }
-  size: 1
-}
-registers {
-  preamble {
     id: 372617042
     name: "ingress.pkt_counter"
     alias: "pkt_counter"
@@ -93,6 +63,26 @@ type_info {
           bitstring {
             bit {
               bitwidth: 48
+            }
+          }
+        }
+      }
+      members {
+        name: "syn_value"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 8
+            }
+          }
+        }
+      }
+      members {
+        name: "fin_value"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 8
             }
           }
         }
