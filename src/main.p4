@@ -67,8 +67,11 @@ struct mac_learn_digest_t {
     //bit<32> pkt_length;
     bit<32> curr_pcaket_length;
     bit<48> curr_interval;
-    bit<8> syn_value;
     bit<8> fin_value;
+    bit<8> syn_value;
+    // bit<8> rst_value;
+    // bit<8> psh_value;
+    // bit<8> ack_value;
 }
 struct local_metadata_t { }
 
@@ -125,14 +128,16 @@ control ingress(
     register<bit<32>>(1) pkt_counter;
     register<bit<48>>(1) last_time_reg;
     
-
     apply {
-	bit<8> syn_value;
-    bit<8> fin_value;
+    bit<8> fin_value = 0;
+	bit<8> syn_value = 0;
+    // bit<8> rst_value = 0;
+    // bit<8> psh_value = 0;
+    // bit<8> ack_value = 0;
 	bit<32> pkt_counter_value;
     bit<32> curr_pcaket_length;
     bit<48> last_time;
-    bit<48> curr_interval;
+    bit<48> curr_interval = 0;
 
 	pkt_counter.read(pkt_counter_value, 0);
     last_time_reg.read(last_time, 0);
@@ -142,23 +147,29 @@ control ingress(
     curr_pcaket_length = st_md.packet_length;
 
     //initialize interval of current packet and last packet
-    curr_interval = 0;
     if(pkt_counter_value >= 2){
         curr_interval = st_md.ingress_global_timestamp - last_time;
     }
 	last_time_reg.write(0, st_md.ingress_global_timestamp);
 
-    syn_value = 0;
-    fin_value = 0;
 	if(hdr.tcp.isValid()){
-            if (hdr.tcp.flags == 02) {
-                syn_value = 1;
-            }
-            if (hdr.tcp.flags == 01) {
+            if (hdr.tcp.flags == 1) {
                 fin_value = 1;
             }
+            if (hdr.tcp.flags == 2) {
+                syn_value = 1;
+            }
+            // if (hdr.tcp.flags == 4) {
+            //     rst_value = 1;
+            // }
+            // if (hdr.tcp.flags == 8) {
+            //     psh_value = 1;
+            // }
+            // if (hdr.tcp.flags == 16) {
+            //     ack_value = 1;
+            // }
         }
-    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, syn_value, fin_value});
+    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, fin_value, syn_value});
 	if(st_md.ingress_port == 1){
         st_md.egress_spec = 2;
 	}

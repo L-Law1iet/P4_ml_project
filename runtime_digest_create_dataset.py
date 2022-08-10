@@ -35,8 +35,8 @@ features = ({
     'average iat':[],
     'max iat':[],
     'min iat':[],
-    'syn count':[],
     'fin count':[],
+    'syn count':[],
             })
 df = pd.DataFrame(features)
 print(df)
@@ -51,8 +51,8 @@ digest_id = passed_digest_id
 count_length = 0
 count_iat = 0
 count_packets = 0
-count_syn = 0
 count_fin = 0
+count_syn = 0
 max_length = 0
 min_length = 0
 max_iat = 0
@@ -118,7 +118,7 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length, count_iat, count_packets, count_syn, count_fin, max_length, min_length, max_iat, min_iat
+    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
     global first_packet
     count_packets = count_packets + 1
     for state in data:
@@ -143,9 +143,9 @@ def show_state(response, lock):
                 max_iat = state
             count_iat = count_iat + state
         elif i == 2:
-            count_syn = count_syn + state
-        elif i == 3:
             count_fin = count_fin + state
+        elif i == 3:
+            count_syn = count_syn + state
         i = i + 1
     lock.release()
 
@@ -215,13 +215,13 @@ def time_window(lock):
         global win_time
         time.sleep(win_time)
         lock.acquire()
-        global count_length, count_iat, count_packets, count_syn, count_fin, max_length, min_length, max_iat, min_iat
+        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
         global first_packet
         if count_length != 0:
             global df
             new_row = {'flow duration':count_length, 'packet count':count_packets, 'avg pkt_length':count_length / count_packets
             , 'max pkt_length':max_length, 'min pkt_length':min_length, 'average iat':count_iat / count_packets, 'max iat':max_iat
-            , 'min iat':min_iat, 'syn count':count_syn, 'fin count':count_fin}
+            , 'min iat':min_iat, 'fin count':count_fin, 'syn count':count_syn}
             # rows = pd.DataFrame(new_row)
             # df = pd.concat([df,rows])
             df = df.append(new_row, ignore_index=True)
@@ -241,15 +241,15 @@ def time_window(lock):
                   (win_time, max_iat))
             print("The min IAT per %d seconds : %d " %
                   (win_time, min_iat))
-            print("The SYN flags per %d seconds : %d " %
-                  (win_time, count_syn))
             print("The FIN flags per %d seconds : %d " %
                   (win_time, count_fin))
+            print("The SYN flags per %d seconds : %d " %
+                  (win_time, count_syn))
             count_packets = 0
             count_length = 0
             count_iat = 0
-            count_syn = 0
             count_fin = 0
+            count_syn = 0
             max_length = 0
             min_length = 0
             max_iat = 0

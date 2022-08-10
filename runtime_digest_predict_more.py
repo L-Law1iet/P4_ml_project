@@ -38,6 +38,9 @@ count_iat = 0
 count_packets = 0
 count_fin = 0
 count_syn = 0
+count_rst = 0
+count_psh = 0
+count_ack = 0
 max_length = 0
 min_length = 0
 max_iat = 0
@@ -99,7 +102,7 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
+    global count_length, count_iat, count_packets, count_fin, count_syn, count_rst, count_psh, count_ack, max_length, min_length, max_iat, min_iat
     global first_packet
     count_packets = count_packets + 1
     for state in data:
@@ -127,6 +130,12 @@ def show_state(response, lock):
             count_fin = count_fin + state
         elif i == 3:
             count_syn = count_syn + state
+        elif i == 4:
+            count_rst = count_rst + state
+        elif i == 5:
+            count_psh = count_psh + state
+        elif i == 6:
+            count_ack = count_ack + state
         i = i + 1
     lock.release()
 
@@ -196,7 +205,7 @@ def time_window(lock):
         global win_time
         time.sleep(win_time)
         lock.acquire()
-        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
+        global count_length, count_iat, count_packets, count_fin, count_syn, count_rst, count_psh, count_ack, max_length, min_length, max_iat, min_iat
         global first_packet
         if count_length != 0:
             print("The total length per %d seconds : %d " %
@@ -219,6 +228,12 @@ def time_window(lock):
                   (win_time, count_fin))
             print("The SYN flags per %d seconds : %d " %
                   (win_time, count_syn))
+            print("The RST flags per %d seconds : %d " %
+                  (win_time, count_rst))
+            print("The PSH flags per %d seconds : %d " %
+                  (win_time, count_psh))
+            print("The ACK flags per %d seconds : %d " %
+                  (win_time, count_ack))
             # predict model
             # global loaded_model
             # result = loaded_model.predict(
@@ -233,6 +248,9 @@ def time_window(lock):
             count_iat = 0.
             count_fin = 0
             count_syn = 0
+            count_rst = 0
+            count_psh = 0
+            count_ack = 0
             max_length = 0
             min_length = 0
             max_iat = 0

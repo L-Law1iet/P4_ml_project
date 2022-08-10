@@ -8,8 +8,8 @@
         ["tmp_0", 48, false],
         ["tmp_1", 8, false],
         ["tmp_2", 8, false],
-        ["syn_value_0", 8, false],
         ["fin_value_0", 8, false],
+        ["syn_value_0", 8, false],
         ["pkt_counter_value_0", 32, false],
         ["last_time_0", 48, false],
         ["curr_interval_0", 48, false]
@@ -294,7 +294,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "src/main.p4",
-        "line" : 110,
+        "line" : 113,
         "column" : 8,
         "source_fragment" : "deparser"
       },
@@ -310,7 +310,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "src/main.p4",
-        "line" : 125,
+        "line" : 128,
         "column" : 25,
         "source_fragment" : "pkt_counter"
       },
@@ -322,7 +322,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "src/main.p4",
-        "line" : 126,
+        "line" : 129,
         "column" : 25,
         "source_fragment" : "last_time_reg"
       },
@@ -357,7 +357,7 @@
   ],
   "actions" : [
     {
-      "name" : "main147",
+      "name" : "main151",
       "id" : 0,
       "runtime_data" : [],
       "primitives" : [
@@ -398,7 +398,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 147,
+            "line" : 151,
             "column" : 8,
             "source_fragment" : "curr_interval = st_md.ingress_global_timestamp - last_time"
           }
@@ -406,10 +406,67 @@
       ]
     },
     {
-      "name" : "main137",
+      "name" : "main132",
       "id" : 1,
       "runtime_data" : [],
       "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "fin_value_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "src/main.p4",
+            "line" : 132,
+            "column" : 4,
+            "source_fragment" : "bit<8> fin_value = 0;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "syn_value_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "src/main.p4",
+            "line" : 133,
+            "column" : 1,
+            "source_fragment" : "bit<8> syn_value = 0;"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "curr_interval_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x000000000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "src/main.p4",
+            "line" : 140,
+            "column" : 4,
+            "source_fragment" : "bit<48> curr_interval = 0;"
+          }
+        },
         {
           "op" : "register_read",
           "parameters" : [
@@ -428,7 +485,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 137,
+            "line" : 142,
             "column" : 1,
             "source_fragment" : "pkt_counter.read(pkt_counter_value, 0)"
           }
@@ -451,7 +508,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 138,
+            "line" : 143,
             "column" : 4,
             "source_fragment" : "last_time_reg.read(last_time, 0)"
           }
@@ -493,7 +550,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 140,
+            "line" : 145,
             "column" : 1,
             "source_fragment" : "pkt_counter_value = pkt_counter_value + 1"
           }
@@ -516,61 +573,16 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 141,
+            "line" : 146,
             "column" : 1,
             "source_fragment" : "pkt_counter.write(0, pkt_counter_value)"
           }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "curr_interval_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x000000000000"
-            }
-          ],
-          "source_info" : {
-            "filename" : "src/main.p4",
-            "line" : 145,
-            "column" : 4,
-            "source_fragment" : "curr_interval = 0"
-          }
         }
       ]
     },
     {
-      "name" : "main155",
+      "name" : "main157",
       "id" : 2,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "syn_value_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x01"
-            }
-          ],
-          "source_info" : {
-            "filename" : "src/main.p4",
-            "line" : 155,
-            "column" : 16,
-            "source_fragment" : "syn_value = 1"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "main158",
-      "id" : 3,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -587,7 +599,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 158,
+            "line" : 157,
             "column" : 16,
             "source_fragment" : "fin_value = 1"
           }
@@ -595,7 +607,33 @@
       ]
     },
     {
-      "name" : "main149",
+      "name" : "main160",
+      "id" : 3,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "syn_value_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "src/main.p4",
+            "line" : 160,
+            "column" : 16,
+            "source_fragment" : "syn_value = 1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "main153",
       "id" : 4,
       "runtime_data" : [],
       "primitives" : [
@@ -617,53 +655,15 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 149,
+            "line" : 153,
             "column" : 1,
             "source_fragment" : "last_time_reg.write(0, st_md.ingress_global_timestamp)"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "syn_value_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x00"
-            }
-          ],
-          "source_info" : {
-            "filename" : "src/main.p4",
-            "line" : 151,
-            "column" : 4,
-            "source_fragment" : "syn_value = 0"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "fin_value_0"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x00"
-            }
-          ],
-          "source_info" : {
-            "filename" : "src/main.p4",
-            "line" : 152,
-            "column" : 4,
-            "source_fragment" : "fin_value = 0"
           }
         }
       ]
     },
     {
-      "name" : "main163",
+      "name" : "main174",
       "id" : 5,
       "runtime_data" : [],
       "primitives" : [
@@ -681,7 +681,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 163,
+            "line" : 174,
             "column" : 8,
             "source_fragment" : "st_md.egress_spec = 2"
           }
@@ -689,7 +689,7 @@
       ]
     },
     {
-      "name" : "main161",
+      "name" : "main172",
       "id" : 6,
       "runtime_data" : [],
       "primitives" : [
@@ -707,7 +707,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 35,
             "source_fragment" : "curr_pcaket_length"
           }
@@ -726,7 +726,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 55,
             "source_fragment" : "curr_interval"
           }
@@ -740,14 +740,14 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "syn_value_0"]
+              "value" : ["scalars", "fin_value_0"]
             }
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 70,
-            "source_fragment" : "syn_value"
+            "source_fragment" : "fin_value"
           }
         },
         {
@@ -759,14 +759,14 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "fin_value_0"]
+              "value" : ["scalars", "syn_value_0"]
             }
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 81,
-            "source_fragment" : "fin_value"
+            "source_fragment" : "syn_value"
           }
         },
         {
@@ -783,15 +783,15 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 4,
-            "source_fragment" : "digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, syn_value, fin_value})"
+            "source_fragment" : "digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, fin_value, syn_value})"
           }
         }
       ]
     },
     {
-      "name" : "main166",
+      "name" : "main177",
       "id" : 7,
       "runtime_data" : [],
       "primitives" : [
@@ -809,7 +809,7 @@
           ],
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 166,
+            "line" : 177,
             "column" : 8,
             "source_fragment" : "st_md.egress_spec = 1"
           }
@@ -823,20 +823,20 @@
       "id" : 0,
       "source_info" : {
         "filename" : "src/main.p4",
-        "line" : 120,
+        "line" : 123,
         "column" : 8,
         "source_fragment" : "ingress"
       },
-      "init_table" : "tbl_main137",
+      "init_table" : "tbl_main132",
       "tables" : [
         {
-          "name" : "tbl_main137",
+          "name" : "tbl_main132",
           "id" : 0,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 137,
-            "column" : 1,
-            "source_fragment" : "pkt_counter.read(pkt_counter_value, 0); ..."
+            "line" : 132,
+            "column" : 4,
+            "source_fragment" : "bit<8> fin_value = 0; ..."
           },
           "key" : [],
           "match_type" : "exact",
@@ -846,10 +846,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [1],
-          "actions" : ["main137"],
+          "actions" : ["main132"],
           "base_default_next" : "node_3",
           "next_tables" : {
-            "main137" : "node_3"
+            "main132" : "node_3"
           },
           "default_entry" : {
             "action_id" : 1,
@@ -859,11 +859,11 @@
           }
         },
         {
-          "name" : "tbl_main147",
+          "name" : "tbl_main151",
           "id" : 1,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 147,
+            "line" : 151,
             "column" : 22,
             "source_fragment" : "="
           },
@@ -875,10 +875,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [0],
-          "actions" : ["main147"],
-          "base_default_next" : "tbl_main149",
+          "actions" : ["main151"],
+          "base_default_next" : "tbl_main153",
           "next_tables" : {
-            "main147" : "tbl_main149"
+            "main151" : "tbl_main153"
           },
           "default_entry" : {
             "action_id" : 0,
@@ -888,13 +888,13 @@
           }
         },
         {
-          "name" : "tbl_main149",
+          "name" : "tbl_main153",
           "id" : 2,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 149,
+            "line" : 153,
             "column" : 1,
-            "source_fragment" : "last_time_reg.write(0, st_md.ingress_global_timestamp); ..."
+            "source_fragment" : "last_time_reg.write(0, st_md.ingress_global_timestamp)"
           },
           "key" : [],
           "match_type" : "exact",
@@ -904,10 +904,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [4],
-          "actions" : ["main149"],
+          "actions" : ["main153"],
           "base_default_next" : "node_6",
           "next_tables" : {
-            "main149" : "node_6"
+            "main153" : "node_6"
           },
           "default_entry" : {
             "action_id" : 4,
@@ -917,11 +917,11 @@
           }
         },
         {
-          "name" : "tbl_main155",
+          "name" : "tbl_main157",
           "id" : 3,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 155,
+            "line" : 157,
             "column" : 26,
             "source_fragment" : "="
           },
@@ -933,10 +933,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [2],
-          "actions" : ["main155"],
+          "actions" : ["main157"],
           "base_default_next" : "node_9",
           "next_tables" : {
-            "main155" : "node_9"
+            "main157" : "node_9"
           },
           "default_entry" : {
             "action_id" : 2,
@@ -946,11 +946,11 @@
           }
         },
         {
-          "name" : "tbl_main158",
+          "name" : "tbl_main160",
           "id" : 4,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 158,
+            "line" : 160,
             "column" : 26,
             "source_fragment" : "="
           },
@@ -962,10 +962,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [3],
-          "actions" : ["main158"],
-          "base_default_next" : "tbl_main161",
+          "actions" : ["main160"],
+          "base_default_next" : "tbl_main172",
           "next_tables" : {
-            "main158" : "tbl_main161"
+            "main160" : "tbl_main172"
           },
           "default_entry" : {
             "action_id" : 3,
@@ -975,13 +975,13 @@
           }
         },
         {
-          "name" : "tbl_main161",
+          "name" : "tbl_main172",
           "id" : 5,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 161,
+            "line" : 172,
             "column" : 4,
-            "source_fragment" : "digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, syn_value, fin_value})"
+            "source_fragment" : "digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, fin_value, syn_value})"
           },
           "key" : [],
           "match_type" : "exact",
@@ -991,10 +991,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [6],
-          "actions" : ["main161"],
+          "actions" : ["main172"],
           "base_default_next" : "node_12",
           "next_tables" : {
-            "main161" : "node_12"
+            "main172" : "node_12"
           },
           "default_entry" : {
             "action_id" : 6,
@@ -1004,11 +1004,11 @@
           }
         },
         {
-          "name" : "tbl_main163",
+          "name" : "tbl_main174",
           "id" : 6,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 163,
+            "line" : 174,
             "column" : 26,
             "source_fragment" : "="
           },
@@ -1020,10 +1020,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [5],
-          "actions" : ["main163"],
+          "actions" : ["main174"],
           "base_default_next" : "node_14",
           "next_tables" : {
-            "main163" : "node_14"
+            "main174" : "node_14"
           },
           "default_entry" : {
             "action_id" : 5,
@@ -1033,11 +1033,11 @@
           }
         },
         {
-          "name" : "tbl_main166",
+          "name" : "tbl_main177",
           "id" : 7,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 166,
+            "line" : 177,
             "column" : 26,
             "source_fragment" : "="
           },
@@ -1049,10 +1049,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [7],
-          "actions" : ["main166"],
+          "actions" : ["main177"],
           "base_default_next" : null,
           "next_tables" : {
-            "main166" : null
+            "main177" : null
           },
           "default_entry" : {
             "action_id" : 7,
@@ -1069,7 +1069,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 146,
+            "line" : 150,
             "column" : 7,
             "source_fragment" : "pkt_counter_value >= 2"
           },
@@ -1087,15 +1087,15 @@
               }
             }
           },
-          "true_next" : "tbl_main147",
-          "false_next" : "tbl_main149"
+          "true_next" : "tbl_main151",
+          "false_next" : "tbl_main153"
         },
         {
           "name" : "node_6",
           "id" : 1,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 153,
+            "line" : 155,
             "column" : 4,
             "source_fragment" : "hdr.tcp.isValid()"
           },
@@ -1111,42 +1111,16 @@
             }
           },
           "true_next" : "node_7",
-          "false_next" : "tbl_main161"
+          "false_next" : "tbl_main172"
         },
         {
           "name" : "node_7",
           "id" : 2,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 154,
+            "line" : 156,
             "column" : 16,
-            "source_fragment" : "hdr.tcp.flags == 02"
-          },
-          "expression" : {
-            "type" : "expression",
-            "value" : {
-              "op" : "==",
-              "left" : {
-                "type" : "field",
-                "value" : ["tcp", "flags"]
-              },
-              "right" : {
-                "type" : "hexstr",
-                "value" : "0x02"
-              }
-            }
-          },
-          "true_next" : "tbl_main155",
-          "false_next" : "node_9"
-        },
-        {
-          "name" : "node_9",
-          "id" : 3,
-          "source_info" : {
-            "filename" : "src/main.p4",
-            "line" : 157,
-            "column" : 16,
-            "source_fragment" : "hdr.tcp.flags == 01"
+            "source_fragment" : "hdr.tcp.flags == 1"
           },
           "expression" : {
             "type" : "expression",
@@ -1162,15 +1136,41 @@
               }
             }
           },
-          "true_next" : "tbl_main158",
-          "false_next" : "tbl_main161"
+          "true_next" : "tbl_main157",
+          "false_next" : "node_9"
+        },
+        {
+          "name" : "node_9",
+          "id" : 3,
+          "source_info" : {
+            "filename" : "src/main.p4",
+            "line" : 159,
+            "column" : 16,
+            "source_fragment" : "hdr.tcp.flags == 2"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["tcp", "flags"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x02"
+              }
+            }
+          },
+          "true_next" : "tbl_main160",
+          "false_next" : "tbl_main172"
         },
         {
           "name" : "node_12",
           "id" : 4,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 162,
+            "line" : 173,
             "column" : 4,
             "source_fragment" : "st_md.ingress_port == 1"
           },
@@ -1188,7 +1188,7 @@
               }
             }
           },
-          "true_next" : "tbl_main163",
+          "true_next" : "tbl_main174",
           "false_next" : "node_14"
         },
         {
@@ -1196,7 +1196,7 @@
           "id" : 5,
           "source_info" : {
             "filename" : "src/main.p4",
-            "line" : 165,
+            "line" : 176,
             "column" : 4,
             "source_fragment" : "st_md.ingress_port == 2"
           },
@@ -1215,7 +1215,7 @@
             }
           },
           "false_next" : null,
-          "true_next" : "tbl_main166"
+          "true_next" : "tbl_main177"
         }
       ]
     },
@@ -1224,7 +1224,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "src/main.p4",
-        "line" : 170,
+        "line" : 181,
         "column" : 8,
         "source_fragment" : "egress"
       },

@@ -68,7 +68,7 @@ type_info {
         }
       }
       members {
-        name: "syn_value"
+        name: "fin_value"
         type_spec {
           bitstring {
             bit {
@@ -78,7 +78,7 @@ type_info {
         }
       }
       members {
-        name: "fin_value"
+        name: "syn_value"
         type_spec {
           bitstring {
             bit {
