@@ -2,6 +2,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
+#define HASH_BASE 10w0
+#define HASH_MAX 10w1023
 #define ETH_TYPE_IPV4 0x0800
 #define IP_PROTO_TCP 8w6
 #define IP_PROTO_UDP 8w17
@@ -59,21 +61,18 @@ struct headers_t {
 }
 
 struct mac_learn_digest_t {
-    //bit<48> src_addr;
-    //bit<9>  ingress_port;
-    //bit<32> num_syn;
-    //bit<32> num_fin;
-    //bit<32> pkt_counter;
-    //bit<32> pkt_length;
+    bit<32> src_ip;
+    bit<32> dst_ip;
+    bit<32> hashed_address;
     bit<32> curr_pcaket_length;
     bit<48> curr_interval;
     bit<8> fin_value;
     bit<8> syn_value;
-    // bit<8> rst_value;
-    // bit<8> psh_value;
-    // bit<8> ack_value;
 }
-struct local_metadata_t { }
+struct local_metadata_t { 
+    bit<64> my_flowID;
+    bit<32> hashed_address;
+}
 
 parser parser_impl(
         packet_in packet,
@@ -115,8 +114,8 @@ control deparser(
         in headers_t hdr) {
     apply {
         pkt.emit(hdr.ethernet);
-	pkt.emit(hdr.ipv4);
-	pkt.emit(hdr.tcp);
+        pkt.emit(hdr.ipv4);
+        pkt.emit(hdr.tcp);
     }
 }
 
@@ -125,32 +124,46 @@ control ingress(
         inout local_metadata_t user_md,
         inout standard_metadata_t st_md) {
 
-    register<bit<32>>(1) pkt_counter;
-    register<bit<48>>(1) last_time_reg;
+    register<bit<32>>(1024) pkt_counter;
+    register<bit<48>>(1024) last_time_reg;
+
+	action commpute_flow_id () {
+		user_md.my_flowID[31:0]=hdr.ipv4.src_addr;
+		user_md.my_flowID[63:32]=hdr.ipv4.dst_addr;
+        hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
+		{hdr.ipv4.src_addr, 7w11, hdr.ipv4.dst_addr}, HASH_MAX);
+	}
     
     apply {
     bit<8> fin_value = 0;
 	bit<8> syn_value = 0;
-    // bit<8> rst_value = 0;
-    // bit<8> psh_value = 0;
-    // bit<8> ack_value = 0;
 	bit<32> pkt_counter_value;
     bit<32> curr_pcaket_length;
     bit<48> last_time;
     bit<48> curr_interval = 0;
+    bit<32> src_ip = 0;
+    bit<32> dst_ip = 0;
+    bit<32> flow_ip = 0;
 
-	pkt_counter.read(pkt_counter_value, 0);
-    last_time_reg.read(last_time, 0);
+    if(hdr.ipv4.isValid()){
+        src_ip = hdr.ipv4.src_addr;
+        dst_ip = hdr.ipv4.dst_addr;
+        flow_ip = src_ip + dst_ip;
+        commpute_flow_id();
+    }
+
+	pkt_counter.read(pkt_counter_value, user_md.hashed_address);
+    last_time_reg.read(last_time, user_md.hashed_address);
 
 	pkt_counter_value = pkt_counter_value + 1;
-	pkt_counter.write(0, pkt_counter_value);
+	pkt_counter.write(user_md.hashed_address, pkt_counter_value);
     curr_pcaket_length = st_md.packet_length;
 
     //initialize interval of current packet and last packet
     if(pkt_counter_value >= 2){
         curr_interval = st_md.ingress_global_timestamp - last_time;
     }
-	last_time_reg.write(0, st_md.ingress_global_timestamp);
+	last_time_reg.write(user_md.hashed_address, st_md.ingress_global_timestamp);
 
 	if(hdr.tcp.isValid()){
             if (hdr.tcp.flags == 1) {
@@ -159,17 +172,8 @@ control ingress(
             if (hdr.tcp.flags == 2) {
                 syn_value = 1;
             }
-            // if (hdr.tcp.flags == 4) {
-            //     rst_value = 1;
-            // }
-            // if (hdr.tcp.flags == 8) {
-            //     psh_value = 1;
-            // }
-            // if (hdr.tcp.flags == 16) {
-            //     ack_value = 1;
-            // }
         }
-    digest<mac_learn_digest_t>(1, {curr_pcaket_length, curr_interval, fin_value, syn_value});
+    digest<mac_learn_digest_t>(1, {src_ip, dst_ip, user_md.hashed_address, curr_pcaket_length, curr_interval, fin_value, syn_value});
 	if(st_md.ingress_port == 1){
         st_md.egress_spec = 2;
 	}

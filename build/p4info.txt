@@ -1,6 +1,13 @@
 pkg_info {
   arch: "v1model"
 }
+actions {
+  preamble {
+    id: 19824909
+    name: "ingress.commpute_flow_id"
+    alias: "commpute_flow_id"
+  }
+}
 registers {
   preamble {
     id: 372617042
@@ -14,7 +21,7 @@ registers {
       }
     }
   }
-  size: 1
+  size: 1024
 }
 registers {
   preamble {
@@ -29,7 +36,7 @@ registers {
       }
     }
   }
-  size: 1
+  size: 1024
 }
 digests {
   preamble {
@@ -47,6 +54,36 @@ type_info {
   structs {
     key: "mac_learn_digest_t"
     value {
+      members {
+        name: "src_ip"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
+      members {
+        name: "dst_ip"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
+      members {
+        name: "hashed_address"
+        type_spec {
+          bitstring {
+            bit {
+              bitwidth: 32
+            }
+          }
+        }
+      }
       members {
         name: "curr_pcaket_length"
         type_spec {

@@ -42,9 +42,13 @@ max_length = 0
 min_length = 0
 max_iat = 0
 min_iat = 0
+src_ip = 0
+dst_ip = 0
+hash_addr = 0
 first_packet = True
-win_time = 2 #time window interval
-loaded_model = joblib.load('rf_model')
+win_time = 2  # time window interval
+loaded_model = joblib.load('sc_DT_model')
+scaler = joblib.load('scaler')
 lock = threading.Lock()
 
 logging.basicConfig(
@@ -53,6 +57,7 @@ logging.basicConfig(
     level=logging.INFO)
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
+
 
 def gen_handshake(election_id):
     req = p4runtime_pb2.StreamMessageRequest()
@@ -99,11 +104,17 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
+    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
     global first_packet
     count_packets = count_packets + 1
     for state in data:
         if i == 0:
+            src_ip = state
+        elif i == 1:
+            dst_ip = state
+        elif i == 2:
+            hash_addr = state
+        elif i == 3:
             if first_packet:
                 max_length = state
                 min_length = state
@@ -113,7 +124,7 @@ def show_state(response, lock):
             if state > max_length:
                 max_length = state
             count_length = count_length + state
-        elif i == 1:
+        elif i == 4:
             if first_packet:
                 max_iat = state
                 min_iat = state
@@ -123,9 +134,9 @@ def show_state(response, lock):
             if state > max_iat:
                 max_iat = state
             count_iat = count_iat + state
-        elif i == 2:
+        elif i == 5:
             count_fin = count_fin + state
-        elif i == 3:
+        elif i == 6:
             count_syn = count_syn + state
         i = i + 1
     lock.release()
@@ -196,7 +207,7 @@ def time_window(lock):
         global win_time
         time.sleep(win_time)
         lock.acquire()
-        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
+        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
         global first_packet
         if count_length != 0:
             print("The total length per %d seconds : %d " %
@@ -219,26 +230,39 @@ def time_window(lock):
                   (win_time, count_fin))
             print("The SYN flags per %d seconds : %d " %
                   (win_time, count_syn))
+            print("The Src IP : %d " %
+                  (src_ip))
+            print("The Dst IP : %d " %
+                  (dst_ip))
+            print("The Hash Address : %d " %
+                  (hash_addr))
             # predict model
-            # global loaded_model
-            # result = loaded_model.predict(
-            # np.array([[count_length, count_packets, count_length / count_packets, max_length, min_length
-            # , count_iat / count_packets, max_iat, min_iat, count_syn, count_fin]]))
-            # if(result == [0]):
-            #     print("The server is normal running.")
-            # else:
-            #     print("The server is under attack!")
+            global loaded_model, scaler
+            result = loaded_model.predict(scaler.transform(
+                np.array([[count_length, count_packets, count_length / count_packets, max_length, min_length, count_iat / count_packets, max_iat, min_iat, count_fin, count_syn]])))
+            if result == [0]:
+                print("The server is normal running.")
+            elif result == [1]:
+                print("Slow Body Attack!")
+            elif result == [2]:
+                print("Slow Header Attack!")
+            elif result == [3]:
+                print("Slow Read!")
             count_packets = 0
             count_length = 0
-            count_iat = 0.
+            count_iat = 0
             count_fin = 0
             count_syn = 0
             max_length = 0
             min_length = 0
             max_iat = 0
             min_iat = 0
+            src_ip = 0
+            dst_ip = 0
+            hash_addr = 0
             first_packet = True
         lock.release()
+
 
 with grpc.insecure_channel('localhost:50001') as channel:
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)
