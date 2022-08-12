@@ -44,7 +44,8 @@ max_iat = 0
 min_iat = 0
 src_ip = 0
 dst_ip = 0
-hash_addr = 0
+hash_addr = ""
+flows = {}
 first_packet = True
 win_time = 2  # time window interval
 loaded_model = joblib.load('sc_DT_model')
@@ -106,6 +107,7 @@ def show_state(response, lock):
     i = 0
     global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
     global first_packet
+    global flows
     count_packets = count_packets + 1
     for state in data:
         if i == 0:
@@ -113,31 +115,35 @@ def show_state(response, lock):
         elif i == 1:
             dst_ip = state
         elif i == 2:
-            hash_addr = state
+            hash_addr = str(state)
+            flows[hash_addr] = {}
         elif i == 3:
             if first_packet:
-                max_length = state
-                min_length = state
+                flows[hash_addr]["max_length"] = state
+                flows[hash_addr]["min_length"] = state
                 first_packet = False
             if state < min_length:
-                min_length = state
+                flows[hash_addr]["min_length"] = state
             if state > max_length:
-                max_length = state
-            count_length = count_length + state
+                flows[hash_addr]["max_length"] = state
+            # TODO fix error
+            flows[hash_addr]["count_length"] = flows[hash_addr]["count_length"] + state
         elif i == 4:
             if first_packet:
-                max_iat = state
-                min_iat = state
+                flows[hash_addr]["max_iat"] = state
+                flows[hash_addr]["min_iat"] = state
                 first_packet = False
             if state < min_iat:
                 min_iat = state
+                flows[hash_addr]["min_iat"] = min_iat
             if state > max_iat:
                 max_iat = state
-            count_iat = count_iat + state
+                flows[hash_addr]["max_iat"] = max_iat
+            flows[hash_addr]["count_iat"] = flows[hash_addr]["count_iat"] + state
         elif i == 5:
-            count_fin = count_fin + state
+            flows[hash_addr]["count_fin"] = flows[hash_addr]["count_fin"] + state
         elif i == 6:
-            count_syn = count_syn + state
+            flows[hash_addr]["count_syn"] = flows[hash_addr]["count_syn"] + state
         i = i + 1
     lock.release()
 
@@ -209,11 +215,12 @@ def time_window(lock):
         lock.acquire()
         global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
         global first_packet
+        global flows
         if count_length != 0:
             print("The total length per %d seconds : %d " %
-                  (win_time, count_length))
+                  (win_time, flows[hash_addr]["count_length"]))
             print("The total packets per %d seconds : %d " %
-                  (win_time, count_packets))
+                  (win_time, flows[hash_addr]["count_packets"]))
             print("The average length per %d seconds : %d " %
                   (win_time, count_length / count_packets))
             print("The MAX length per %d seconds : %d " %
@@ -234,7 +241,7 @@ def time_window(lock):
                   (src_ip))
             print("The Dst IP : %d " %
                   (dst_ip))
-            print("The Hash Address : %d " %
+            print("The Hash Address : %s " %
                   (hash_addr))
             # predict model
             global loaded_model, scaler
@@ -259,7 +266,7 @@ def time_window(lock):
             min_iat = 0
             src_ip = 0
             dst_ip = 0
-            hash_addr = 0
+            hash_addr = ""
             first_packet = True
         lock.release()
 
