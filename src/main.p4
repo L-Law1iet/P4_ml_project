@@ -173,7 +173,7 @@ control ingress(
                 syn_value = 1;
             }
         }
-    digest<mac_learn_digest_t>(1, {src_ip, dst_ip, user_md.hashed_address, curr_pcaket_length, curr_interval, fin_value, syn_value});
+    digest<mac_learn_digest_t>(1, {user_md.hashed_address, src_ip, dst_ip, curr_pcaket_length, curr_interval, fin_value, syn_value});
 	if(st_md.ingress_port == 1){
         st_md.egress_spec = 2;
 	}

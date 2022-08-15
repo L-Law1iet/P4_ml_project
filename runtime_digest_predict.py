@@ -33,20 +33,7 @@ P4BIN = os.getenv('P4BIN', 'build/bmv2.json')
 passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
-count_length = 0
-count_iat = 0
-count_packets = 0
-count_fin = 0
-count_syn = 0
-max_length = 0
-min_length = 0
-max_iat = 0
-min_iat = 0
-src_ip = 0
-dst_ip = 0
-hash_addr = ""
 flows = {}
-first_packet = True
 win_time = 2  # time window interval
 loaded_model = joblib.load('sc_DT_model')
 scaler = joblib.load('scaler')
@@ -105,45 +92,56 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
-    global first_packet
     global flows
-    count_packets = count_packets + 1
+    hash_addr = ""
     for state in data:
         if i == 0:
-            src_ip = state
-        elif i == 1:
-            dst_ip = state
-        elif i == 2:
             hash_addr = str(state)
-            flows[hash_addr] = {}
+            if hash_addr not in flows:
+                flows[hash_addr] = {}
+                flows[hash_addr]["first_packet"] = True
+                flows[hash_addr]["count_packets"] = 1
+            else:
+                flows[hash_addr]["count_packets"] = flows[hash_addr]["count_packets"] + 1
+        elif i == 1:
+            flows[hash_addr]["src_ip"] = state
+        elif i == 2:
+            flows[hash_addr]["dst_ip"] = state
         elif i == 3:
-            if first_packet:
+            if flows[hash_addr]["first_packet"] == True:
                 flows[hash_addr]["max_length"] = state
                 flows[hash_addr]["min_length"] = state
-                first_packet = False
-            if state < min_length:
+            if state < int(flows[hash_addr]["min_length"]):
                 flows[hash_addr]["min_length"] = state
-            if state > max_length:
+            if state > flows[hash_addr]["max_length"]:
                 flows[hash_addr]["max_length"] = state
-            # TODO fix error
-            flows[hash_addr]["count_length"] = flows[hash_addr]["count_length"] + state
+            if "count_length" in flows[hash_addr]:
+                flows[hash_addr]["count_length"] = flows[hash_addr]["count_length"] + state
+            else:
+                flows[hash_addr]["count_length"] = state
         elif i == 4:
-            if first_packet:
+            if flows[hash_addr]["first_packet"]:
                 flows[hash_addr]["max_iat"] = state
                 flows[hash_addr]["min_iat"] = state
-                first_packet = False
-            if state < min_iat:
-                min_iat = state
-                flows[hash_addr]["min_iat"] = min_iat
-            if state > max_iat:
-                max_iat = state
-                flows[hash_addr]["max_iat"] = max_iat
-            flows[hash_addr]["count_iat"] = flows[hash_addr]["count_iat"] + state
+            if state < flows[hash_addr]["min_iat"]:
+                flows[hash_addr]["min_iat"] = state
+            if state > flows[hash_addr]["max_iat"]:
+                flows[hash_addr]["max_iat"] = state
+            if "count_iat" in flows[hash_addr]:
+                flows[hash_addr]["count_iat"] = flows[hash_addr]["count_iat"] + state
+            else:
+                flows[hash_addr]["count_iat"] = state
         elif i == 5:
-            flows[hash_addr]["count_fin"] = flows[hash_addr]["count_fin"] + state
+            if "count_fin" in flows[hash_addr]:
+                flows[hash_addr]["count_fin"] = flows[hash_addr]["count_fin"] + state
+            else:
+                flows[hash_addr]["count_fin"] = state
         elif i == 6:
-            flows[hash_addr]["count_syn"] = flows[hash_addr]["count_syn"] + state
+            if "count_syn" in flows[hash_addr]:
+                flows[hash_addr]["count_syn"] = flows[hash_addr]["count_syn"] + state
+            else:
+                flows[hash_addr]["count_syn"] = state
+            flows[hash_addr]["first_packet"] = False
         i = i + 1
     lock.release()
 
@@ -213,61 +211,61 @@ def time_window(lock):
         global win_time
         time.sleep(win_time)
         lock.acquire()
-        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat, src_ip, dst_ip, hash_addr
-        global first_packet
         global flows
-        if count_length != 0:
-            print("The total length per %d seconds : %d " %
-                  (win_time, flows[hash_addr]["count_length"]))
-            print("The total packets per %d seconds : %d " %
-                  (win_time, flows[hash_addr]["count_packets"]))
-            print("The average length per %d seconds : %d " %
-                  (win_time, count_length / count_packets))
-            print("The MAX length per %d seconds : %d " %
-                  (win_time, max_length))
-            print("The min length per %d seconds : %d " %
-                  (win_time, min_length))
-            print("The average IAT per %d seconds : %d " %
-                  (win_time, count_iat / count_packets))
-            print("The MAX IAT per %d seconds : %d " %
-                  (win_time, max_iat))
-            print("The min IAT per %d seconds : %d " %
-                  (win_time, min_iat))
-            print("The FIN flags per %d seconds : %d " %
-                  (win_time, count_fin))
-            print("The SYN flags per %d seconds : %d " %
-                  (win_time, count_syn))
-            print("The Src IP : %d " %
-                  (src_ip))
-            print("The Dst IP : %d " %
-                  (dst_ip))
-            print("The Hash Address : %s " %
-                  (hash_addr))
-            # predict model
+        # if hash_addr in flows:
+        #     print("The total length per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_length"]))
+        #     print("The total packets per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_packets"]))
+        #     print("The average length per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"]))
+        #     print("The MAX length per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["max_length"]))
+        #     print("The min length per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["min_length"]))
+        #     print("The average IAT per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"]))
+        #     print("The MAX IAT per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["max_iat"]))
+        #     print("The min IAT per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["min_iat"]))
+        #     print("The FIN flags per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_fin"]))
+        #     print("The SYN flags per %d seconds : %d " %
+        #           (win_time, flows[hash_addr]["count_syn"]))
+        #     print("The Src IP : %d " %
+        #           (flows[hash_addr]["src_ip"]))
+        #     print("The Dst IP : %d " %
+        #           (flows[hash_addr]["dst_ip"]))
+        #     print("The Hash Address : %s " %
+        #           (hash_addr))
+        # predict model
+        status = [0, 0, 0, 0]
+        for hash_addr in flows:
             global loaded_model, scaler
-            result = loaded_model.predict(scaler.transform(
-                np.array([[count_length, count_packets, count_length / count_packets, max_length, min_length, count_iat / count_packets, max_iat, min_iat, count_fin, count_syn]])))
-            if result == [0]:
+            prediction = loaded_model.predict(scaler.transform(
+                np.array([[flows[hash_addr]["count_length"], flows[hash_addr]["count_packets"], flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_length"], flows[hash_addr]["min_length"], flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_iat"], flows[hash_addr]["min_iat"], flows[hash_addr]["count_fin"], flows[hash_addr]["count_syn"]]])))
+            if prediction == [0]:
+                status[0] = status[0] + 1
+            elif prediction == [1]:
+                status[1] = status[1] + 1
+            elif prediction == [2]:
+                status[2] = status[2] + 1
+            elif prediction == [3]:
+                status[3] = status[3] + 1
+        if status != [0, 0, 0, 0]:
+            if (status[1] == 0 and status[2] == 0 and status[3] == 0):
                 print("The server is normal running.")
-            elif result == [1]:
-                print("Slow Body Attack!")
-            elif result == [2]:
-                print("Slow Header Attack!")
-            elif result == [3]:
-                print("Slow Read!")
-            count_packets = 0
-            count_length = 0
-            count_iat = 0
-            count_fin = 0
-            count_syn = 0
-            max_length = 0
-            min_length = 0
-            max_iat = 0
-            min_iat = 0
-            src_ip = 0
-            dst_ip = 0
-            hash_addr = ""
-            first_packet = True
+            else:
+                if (status[1] > status[2] and status[1] > status[3]):
+                    print("Slow Body Attack!")
+                elif (status[2] > status[1] and status[2] > status[3]):
+                    print("Slow Header Attack!")
+                elif (status[3] > status[1] and status[3] > status[2]):
+                    print("Slow Read Attack!")
+                else:
+                    print("The server is under multiple ddos attack")
+        flows = {}
         lock.release()
 
 

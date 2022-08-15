@@ -1070,14 +1070,14 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "src_ip_0"]
+              "value" : ["scalars", "userMetadata.hashed_address"]
             }
           ],
           "source_info" : {
             "filename" : "src/main.p4",
             "line" : 176,
             "column" : 35,
-            "source_fragment" : "src_ip"
+            "source_fragment" : "user_md.hashed_address"
           }
         },
         {
@@ -1089,14 +1089,14 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "dst_ip_0"]
+              "value" : ["scalars", "src_ip_0"]
             }
           ],
           "source_info" : {
             "filename" : "src/main.p4",
             "line" : 176,
-            "column" : 43,
-            "source_fragment" : "dst_ip"
+            "column" : 59,
+            "source_fragment" : "src_ip"
           }
         },
         {
@@ -1108,14 +1108,14 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "userMetadata.hashed_address"]
+              "value" : ["scalars", "dst_ip_0"]
             }
           ],
           "source_info" : {
             "filename" : "src/main.p4",
             "line" : 176,
-            "column" : 51,
-            "source_fragment" : "user_md.hashed_address"
+            "column" : 67,
+            "source_fragment" : "dst_ip"
           }
         },
         {
@@ -1210,7 +1210,7 @@
             "filename" : "src/main.p4",
             "line" : 176,
             "column" : 4,
-            "source_fragment" : "digest<mac_learn_digest_t>(1, {src_ip, dst_ip, user_md.hashed_address, curr_pcaket_length, curr_interval, fin_value, syn_value})"
+            "source_fragment" : "digest<mac_learn_digest_t>(1, {user_md.hashed_address, src_ip, dst_ip, curr_pcaket_length, curr_interval, fin_value, syn_value})"
           }
         }
       ]
@@ -1493,7 +1493,7 @@
             "filename" : "src/main.p4",
             "line" : 176,
             "column" : 4,
-            "source_fragment" : "digest<mac_learn_digest_t>(1, {src_ip, dst_ip, user_md.hashed_address, curr_pcaket_length, curr_interval, fin_value, syn_value})"
+            "source_fragment" : "digest<mac_learn_digest_t>(1, {user_md.hashed_address, src_ip, dst_ip, curr_pcaket_length, curr_interval, fin_value, syn_value})"
           },
           "key" : [],
           "match_type" : "exact",
