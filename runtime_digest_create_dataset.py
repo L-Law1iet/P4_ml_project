@@ -27,17 +27,17 @@ import pandas as pd
 import atexit
 
 features = ({
-    'flow duration':[],
-    'packet count':[],
-    'avg pkt_length':[],
-    'max pkt_length':[],
-    'min pkt_length':[],
-    'average iat':[],
-    'max iat':[],
-    'min iat':[],
-    'fin count':[],
-    'syn count':[],
-            })
+    'flow duration': [],
+    'packet count': [],
+    'avg pkt_length': [],
+    'max pkt_length': [],
+    'min pkt_length': [],
+    'average iat': [],
+    'max iat': [],
+    'min iat': [],
+    'fin count': [],
+    'syn count': [],
+})
 df = pd.DataFrame(features)
 print(df)
 
@@ -48,17 +48,8 @@ P4BIN = os.getenv('P4BIN', 'build/bmv2.json')
 passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
-count_length = 0
-count_iat = 0
-count_packets = 0
-count_fin = 0
-count_syn = 0
-max_length = 0
-min_length = 0
-max_iat = 0
-min_iat = 0
-first_packet = True
-win_time = 2 #time window interval
+flows = {}
+win_time = 2  # time window interval
 lock = threading.Lock()
 
 logging.basicConfig(
@@ -68,10 +59,13 @@ logging.basicConfig(
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
 
+
 def write_csv():
     df.to_csv("dataset.csv")
 
+
 atexit.register(write_csv)
+
 
 def gen_handshake(election_id):
     req = p4runtime_pb2.StreamMessageRequest()
@@ -118,34 +112,56 @@ def show_state(response, lock):
 
     lock.acquire()
     i = 0
-    global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
-    global first_packet
-    count_packets = count_packets + 1
+    global flows
+    hash_addr = ""
     for state in data:
         if i == 0:
-            if first_packet:
-                max_length = state
-                min_length = state
-                first_packet = False
-            if state < min_length:
-                min_length = state
-            if state > max_length:
-                max_length = state
-            count_length = count_length + state
+            hash_addr = str(state)
+            if hash_addr not in flows:
+                flows[hash_addr] = {}
+                flows[hash_addr]["first_packet"] = True
+                flows[hash_addr]["count_packets"] = 1
+            else:
+                flows[hash_addr]["count_packets"] = flows[hash_addr]["count_packets"] + 1
         elif i == 1:
-            if first_packet:
-                max_iat = state
-                min_iat = state
-                first_packet = False
-            if state < min_iat:
-                min_iat = state
-            if state > max_iat:
-                max_iat = state
-            count_iat = count_iat + state
+            flows[hash_addr]["src_ip"] = state
         elif i == 2:
-            count_fin = count_fin + state
+            flows[hash_addr]["dst_ip"] = state
         elif i == 3:
-            count_syn = count_syn + state
+            if flows[hash_addr]["first_packet"] == True:
+                flows[hash_addr]["max_length"] = state
+                flows[hash_addr]["min_length"] = state
+            if state < int(flows[hash_addr]["min_length"]):
+                flows[hash_addr]["min_length"] = state
+            if state > flows[hash_addr]["max_length"]:
+                flows[hash_addr]["max_length"] = state
+            if "count_length" in flows[hash_addr]:
+                flows[hash_addr]["count_length"] = flows[hash_addr]["count_length"] + state
+            else:
+                flows[hash_addr]["count_length"] = state
+        elif i == 4:
+            if flows[hash_addr]["first_packet"]:
+                flows[hash_addr]["max_iat"] = state
+                flows[hash_addr]["min_iat"] = state
+            if state < flows[hash_addr]["min_iat"]:
+                flows[hash_addr]["min_iat"] = state
+            if state > flows[hash_addr]["max_iat"]:
+                flows[hash_addr]["max_iat"] = state
+            if "count_iat" in flows[hash_addr]:
+                flows[hash_addr]["count_iat"] = flows[hash_addr]["count_iat"] + state
+            else:
+                flows[hash_addr]["count_iat"] = state
+        elif i == 5:
+            if "count_fin" in flows[hash_addr]:
+                flows[hash_addr]["count_fin"] = flows[hash_addr]["count_fin"] + state
+            else:
+                flows[hash_addr]["count_fin"] = state
+        elif i == 6:
+            if "count_syn" in flows[hash_addr]:
+                flows[hash_addr]["count_syn"] = flows[hash_addr]["count_syn"] + state
+            else:
+                flows[hash_addr]["count_syn"] = state
+            flows[hash_addr]["first_packet"] = False
         i = i + 1
     lock.release()
 
@@ -215,47 +231,17 @@ def time_window(lock):
         global win_time
         time.sleep(win_time)
         lock.acquire()
-        global count_length, count_iat, count_packets, count_fin, count_syn, max_length, min_length, max_iat, min_iat
-        global first_packet
-        if count_length != 0:
-            global df
-            new_row = {'flow duration':count_length, 'packet count':count_packets, 'avg pkt_length':count_length / count_packets
-            , 'max pkt_length':max_length, 'min pkt_length':min_length, 'average iat':count_iat / count_packets, 'max iat':max_iat
-            , 'min iat':min_iat, 'fin count':count_fin, 'syn count':count_syn}
+        global flows
+        global df
+        for hash_addr in flows:
+            new_row = {'flow duration': flows[hash_addr]["count_length"], 'packet count': flows[hash_addr]["count_packets"], 'avg pkt_length': flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], 'max pkt_length': flows[hash_addr]["max_length"],
+                       'min pkt_length': flows[hash_addr]["min_length"], 'average iat': flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], 'max iat': flows[hash_addr]["max_iat"], 'min iat': flows[hash_addr]["min_iat"], 'fin count': flows[hash_addr]["count_fin"], 'syn count': flows[hash_addr]["count_syn"]}
             # rows = pd.DataFrame(new_row)
             # df = pd.concat([df,rows])
             df = df.append(new_row, ignore_index=True)
-            print("The total length per %d seconds : %d " %
-                  (win_time, count_length))
-            print("The total packets per %d seconds : %d " %
-                  (win_time, count_packets))
-            print("The average length per %d seconds : %d " %
-                  (win_time, count_length / count_packets))
-            print("The MAX length per %d seconds : %d " %
-                  (win_time, max_length))
-            print("The min length per %d seconds : %d " %
-                  (win_time, min_length))
-            print("The average IAT per %d seconds : %d " %
-                  (win_time, count_iat / count_packets))
-            print("The MAX IAT per %d seconds : %d " %
-                  (win_time, max_iat))
-            print("The min IAT per %d seconds : %d " %
-                  (win_time, min_iat))
-            print("The FIN flags per %d seconds : %d " %
-                  (win_time, count_fin))
-            print("The SYN flags per %d seconds : %d " %
-                  (win_time, count_syn))
-            count_packets = 0
-            count_length = 0
-            count_iat = 0
-            count_fin = 0
-            count_syn = 0
-            max_length = 0
-            min_length = 0
-            max_iat = 0
-            min_iat = 0
-            first_packet = True
+        flows = {}
         lock.release()
+
 
 with grpc.insecure_channel('localhost:50001') as channel:
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)
