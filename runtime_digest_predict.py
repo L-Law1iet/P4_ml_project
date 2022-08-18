@@ -212,33 +212,6 @@ def time_window(lock):
         time.sleep(win_time)
         lock.acquire()
         global flows
-        # if hash_addr in flows:
-        #     print("The total length per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_length"]))
-        #     print("The total packets per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_packets"]))
-        #     print("The average length per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"]))
-        #     print("The MAX length per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["max_length"]))
-        #     print("The min length per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["min_length"]))
-        #     print("The average IAT per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"]))
-        #     print("The MAX IAT per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["max_iat"]))
-        #     print("The min IAT per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["min_iat"]))
-        #     print("The FIN flags per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_fin"]))
-        #     print("The SYN flags per %d seconds : %d " %
-        #           (win_time, flows[hash_addr]["count_syn"]))
-        #     print("The Src IP : %d " %
-        #           (flows[hash_addr]["src_ip"]))
-        #     print("The Dst IP : %d " %
-        #           (flows[hash_addr]["dst_ip"]))
-        #     print("The Hash Address : %s " %
-        #           (hash_addr))
         # predict model
         status = [0, 0, 0, 0]
         for hash_addr in flows:

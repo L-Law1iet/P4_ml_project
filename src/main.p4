@@ -70,7 +70,6 @@ struct mac_learn_digest_t {
     bit<8> syn_value;
 }
 struct local_metadata_t { 
-    bit<64> my_flowID;
     bit<32> hashed_address;
 }
 
@@ -127,19 +126,15 @@ control ingress(
     register<bit<32>>(1024) pkt_counter;
     register<bit<48>>(1024) last_time_reg;
 
-	action commpute_flow_id () {
-		user_md.my_flowID[31:0]=hdr.ipv4.src_addr;
-		user_md.my_flowID[63:32]=hdr.ipv4.dst_addr;
-        
-        if(st_md.ingress_port == 1){
-            hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
-            {hdr.ipv4.dst_addr, hdr.ipv4.src_addr}, HASH_MAX);
-        }
-        eles{
-            hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
-            {hdr.ipv4.src_addr, hdr.ipv4.dst_addr}, HASH_MAX);
-        }
+	action compute_server_flow () {
+        hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
+        {hdr.ipv4.dst_addr, 7w11, hdr.ipv4.src_addr}, HASH_MAX);
 	}
+
+	action compute_client_flow () {
+        hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
+        {hdr.ipv4.src_addr, 7w11, hdr.ipv4.dst_addr}, HASH_MAX);
+	}    
     
     apply {
     bit<8> fin_value = 0;
@@ -154,8 +149,14 @@ control ingress(
     if(hdr.ipv4.isValid()){
         src_ip = hdr.ipv4.src_addr;
         dst_ip = hdr.ipv4.dst_addr;
-        commpute_flow_id();
-    }
+        
+        if(st_md.ingress_port == 1){
+            compute_server_flow();
+        }
+        else{
+            compute_client_flow();
+        }
+	}
 
 	pkt_counter.read(pkt_counter_value, user_md.hashed_address);
     last_time_reg.read(last_time, user_md.hashed_address);

@@ -3,9 +3,16 @@ pkg_info {
 }
 actions {
   preamble {
-    id: 19824909
-    name: "ingress.commpute_flow_id"
-    alias: "commpute_flow_id"
+    id: 26122104
+    name: "ingress.compute_server_flow"
+    alias: "compute_server_flow"
+  }
+}
+actions {
+  preamble {
+    id: 30912568
+    name: "ingress.compute_client_flow"
+    alias: "compute_client_flow"
   }
 }
 registers {
