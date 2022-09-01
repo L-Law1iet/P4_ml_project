@@ -15,6 +15,12 @@ import traceback
 import re
 import time
 
+sys.path.append(os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '/home/lawliet/p4-utils/'))
+import p4runtime_lib.bmv2
+import p4runtime_lib.helper
+import p4runtime_sh.shell as sh
+
 import google.protobuf.text_format
 from google.rpc import status_pb2, code_pb2
 import grpc
@@ -34,10 +40,13 @@ passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
 flows = {}
+exec_count = 0.0
+time_count = 0.0
 win_time = 2  # time window interval
 loaded_model = joblib.load('sc_DT_model')
 scaler = joblib.load('scaler')
 lock = threading.Lock()
+curr_hash = 0
 
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d: %(process)d: %(levelname).1s/%(name)s: %(filename)s:%(lineno)d: %(message)s',
@@ -93,10 +102,12 @@ def show_state(response, lock):
     lock.acquire()
     i = 0
     global flows
+    global curr_hash
     hash_addr = ""
     for state in data:
         if i == 0:
             hash_addr = str(state)
+            curr_hash = state
             if hash_addr not in flows:
                 flows[hash_addr] = {}
                 flows[hash_addr]["first_packet"] = True
@@ -178,7 +189,6 @@ def insert_digest(stub, digest_id):
     digest_entry.config.ack_timeout_ns = 0
     response = stub.Write(req)
 
-
 def set_fwd_pipe_config(stub, p4info_path, bin_path):
     req = p4runtime_pb2.SetForwardingPipelineConfigRequest()
     req.device_id = device_id
@@ -215,7 +225,8 @@ def time_window(lock):
         # predict model
         status = [0, 0, 0, 0]
         for hash_addr in flows:
-            global loaded_model, scaler
+            global loaded_model, scaler, exec_count, time_count
+            global curr_hash
             prediction = loaded_model.predict(scaler.transform(
                 np.array([[flows[hash_addr]["count_length"], flows[hash_addr]["count_packets"], flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_length"], flows[hash_addr]["min_length"], flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_iat"], flows[hash_addr]["min_iat"], flows[hash_addr]["count_fin"], flows[hash_addr]["count_syn"]]])))
             if prediction == [0]:
@@ -229,7 +240,7 @@ def time_window(lock):
         if status != [0, 0, 0, 0]:
             if (status[1] == 0 and status[2] == 0 and status[3] == 0):
                 print("The server is normal running.")
-            else:
+            else:            
                 if (status[1] > status[2] and status[1] > status[3]):
                     print("Slow Body Attack!")
                 elif (status[2] > status[1] and status[2] > status[3]):
@@ -238,9 +249,19 @@ def time_window(lock):
                     print("Slow Read Attack!")
                 else:
                     print("The server is under multiple ddos attack")
+                # use p4runtime shell to insert table entry to block ip
+                sh.setup(
+                    device_id=1,
+                    grpc_addr='localhost:50001',
+                    election_id=(2,3),
+                    config=sh.FwdPipeConfig('build/p4info.txt','build/bmv2.json')
+                )
+                te = sh.TableEntry('ingress.table_block')(action='drop')
+                te.match['hdr.ipv4.src_addr'] = str(flows[hash_addr]["src_ip"])
+                te.insert()
+                sh.teardown
         flows = {}
         lock.release()
-
 
 with grpc.insecure_channel('localhost:50001') as channel:
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)

@@ -71,6 +71,7 @@ struct mac_learn_digest_t {
 }
 struct local_metadata_t { 
     bit<32> hashed_address;
+    bit<8> block_flag;
 }
 
 parser parser_impl(
@@ -126,6 +127,10 @@ control ingress(
     register<bit<32>>(1024) pkt_counter;
     register<bit<48>>(1024) last_time_reg;
 
+    action drop() {
+        user_md.block_flag = 1;
+    }
+
 	action compute_server_flow () {
         hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
         {hdr.ipv4.dst_addr, 7w11, hdr.ipv4.src_addr}, HASH_MAX);
@@ -134,8 +139,20 @@ control ingress(
 	action compute_client_flow () {
         hash(user_md.hashed_address, HashAlgorithm.crc16, HASH_BASE,
         {hdr.ipv4.src_addr, 7w11, hdr.ipv4.dst_addr}, HASH_MAX);
-	}    
-    
+	}
+
+    table table_block {
+        key = {
+            hdr.ipv4.src_addr: exact;
+        }
+        actions = {
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction();
+    }
+
     apply {
     bit<8> fin_value = 0;
 	bit<8> syn_value = 0;
@@ -145,8 +162,10 @@ control ingress(
     bit<48> curr_interval = 0;
     bit<32> src_ip = 0;
     bit<32> dst_ip = 0;
+    user_md.block_flag = 0;
 
     if(hdr.ipv4.isValid()){
+        table_block.apply();
         src_ip = hdr.ipv4.src_addr;
         dst_ip = hdr.ipv4.dst_addr;
         
@@ -180,12 +199,18 @@ control ingress(
             }
         }
     digest<mac_learn_digest_t>(1, {user_md.hashed_address, src_ip, dst_ip, curr_pcaket_length, curr_interval, fin_value, syn_value});
-	if(st_md.ingress_port == 1){
-        st_md.egress_spec = 2;
-	}
-	if(st_md.ingress_port == 2){
-        st_md.egress_spec = 1;
-	}
+    
+    if(user_md.block_flag == 1){
+        st_md.egress_spec = 0;
+    }
+    else{ // user_md.block_flag == 0
+        if(st_md.ingress_port == 1){
+            st_md.egress_spec = 2;
+        }
+        if(st_md.ingress_port == 2){
+            st_md.egress_spec = 1;
+        }
+    }
     }
 }
 control egress(
