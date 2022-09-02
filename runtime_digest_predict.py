@@ -31,6 +31,7 @@ import pandas as pd
 
 import numpy as np
 import joblib
+import atexit
 
 # parameters
 device_id = 1
@@ -40,6 +41,7 @@ passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
 flows = {}
+banip = {}
 exec_count = 0.0
 time_count = 0.0
 win_time = 2  # time window interval
@@ -54,6 +56,17 @@ logging.basicConfig(
     level=logging.INFO)
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
+
+sh.setup(
+    device_id=1,
+    grpc_addr='localhost:50001',
+    election_id=(2,3),
+    config=sh.FwdPipeConfig('build/p4info.txt','build/bmv2.json')
+)
+
+def stop_sh():
+        sh.teardown()
+atexit.register(stop_sh)
 
 
 def gen_handshake(election_id):
@@ -115,9 +128,9 @@ def show_state(response, lock):
             else:
                 flows[hash_addr]["count_packets"] = flows[hash_addr]["count_packets"] + 1
         elif i == 1:
-            flows[hash_addr]["src_ip"] = state
+            flows[hash_addr]["src_addr"] = state
         elif i == 2:
-            flows[hash_addr]["dst_ip"] = state
+            flows[hash_addr]["dst_addr"] = state
         elif i == 3:
             if flows[hash_addr]["first_packet"] == True:
                 flows[hash_addr]["max_length"] = state
@@ -222,6 +235,7 @@ def time_window(lock):
         time.sleep(win_time)
         lock.acquire()
         global flows
+        global sh
         # predict model
         status = [0, 0, 0, 0]
         for hash_addr in flows:
@@ -231,35 +245,29 @@ def time_window(lock):
                 np.array([[flows[hash_addr]["count_length"], flows[hash_addr]["count_packets"], flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_length"], flows[hash_addr]["min_length"], flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_iat"], flows[hash_addr]["min_iat"], flows[hash_addr]["count_fin"], flows[hash_addr]["count_syn"]]])))
             if prediction == [0]:
                 status[0] = status[0] + 1
-            elif prediction == [1]:
-                status[1] = status[1] + 1
-            elif prediction == [2]:
-                status[2] = status[2] + 1
-            elif prediction == [3]:
-                status[3] = status[3] + 1
-        if status != [0, 0, 0, 0]:
-            if (status[1] == 0 and status[2] == 0 and status[3] == 0):
-                print("The server is normal running.")
-            else:            
-                if (status[1] > status[2] and status[1] > status[3]):
-                    print("Slow Body Attack!")
-                elif (status[2] > status[1] and status[2] > status[3]):
-                    print("Slow Header Attack!")
-                elif (status[3] > status[1] and status[3] > status[2]):
-                    print("Slow Read Attack!")
-                else:
-                    print("The server is under multiple ddos attack")
+            # elif prediction == [1]:
+            #     status[1] = status[1] + 1
+            # elif prediction == [2]:
+            #     status[2] = status[2] + 1
+            # elif prediction == [3]:
+            #     status[3] = status[3] + 1
+            else:
                 # use p4runtime shell to insert table entry to block ip
-                sh.setup(
-                    device_id=1,
-                    grpc_addr='localhost:50001',
-                    election_id=(2,3),
-                    config=sh.FwdPipeConfig('build/p4info.txt','build/bmv2.json')
-                )
                 te = sh.TableEntry('ingress.table_block')(action='drop')
-                te.match['hdr.ipv4.src_addr'] = str(flows[hash_addr]["src_ip"])
+                te.match['hdr.ipv4.src_addr'] = str(flows[hash_addr]["src_addr"])
                 te.insert()
-                sh.teardown
+        # if status != [0, 0, 0, 0]:
+        #     if (status[1] == 0 and status[2] == 0 and status[3] == 0):
+        #         print("The server is normal running.")
+        #     else:
+        #         if (status[1] > status[2] and status[1] > status[3]):
+        #             print("Slow Body Attack!")
+        #         elif (status[2] > status[1] and status[2] > status[3]):
+        #             print("Slow Header Attack!")
+        #         elif (status[3] > status[1] and status[3] > status[2]):
+        #             print("Slow Read Attack!")
+        #         else:
+        #             print("The server is under multiple ddos attack.")
         flows = {}
         lock.release()
 
