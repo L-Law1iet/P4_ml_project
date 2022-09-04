@@ -15,10 +15,10 @@ import traceback
 import re
 import time
 
-sys.path.append(os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '/home/lawliet/p4-utils/'))
-import p4runtime_lib.bmv2
-import p4runtime_lib.helper
+# sys.path.append(os.path.join(os.path.dirname(
+#     os.path.abspath(__file__)), '/home/lawliet/p4-utils/'))
+# import p4runtime_lib.bmv2
+# import p4runtime_lib.helper
 import p4runtime_sh.shell as sh
 
 import google.protobuf.text_format
@@ -41,7 +41,7 @@ passed_digest_id = 402184575
 failed_digest_id = 401776493
 digest_id = passed_digest_id
 flows = {}
-banip = {}
+banip = []
 exec_count = 0.0
 time_count = 0.0
 win_time = 2  # time window interval
@@ -57,16 +57,9 @@ logging.basicConfig(
 send_queue = queue.Queue()
 recv_queue = queue.Queue()
 
-sh.setup(
-    device_id=1,
-    grpc_addr='localhost:50001',
-    election_id=(2,3),
-    config=sh.FwdPipeConfig('build/p4info.txt','build/bmv2.json')
-)
-
-def stop_sh():
-        sh.teardown()
-atexit.register(stop_sh)
+# def stop_sh():
+#         sh.teardown()
+# atexit.register(stop_sh)
 
 
 def gen_handshake(election_id):
@@ -235,7 +228,7 @@ def time_window(lock):
         time.sleep(win_time)
         lock.acquire()
         global flows
-        global sh
+        global banip
         # predict model
         status = [0, 0, 0, 0]
         for hash_addr in flows:
@@ -252,10 +245,19 @@ def time_window(lock):
             # elif prediction == [3]:
             #     status[3] = status[3] + 1
             else:
-                # use p4runtime shell to insert table entry to block ip
-                te = sh.TableEntry('ingress.table_block')(action='drop')
-                te.match['hdr.ipv4.src_addr'] = str(flows[hash_addr]["src_addr"])
-                te.insert()
+                if banip.count(hash_addr) == 0:
+                    banip.append(hash_addr)
+                    sh.setup(
+                    device_id=1,
+                    grpc_addr='localhost:50001',
+                    election_id=(2,3),
+                    config=sh.FwdPipeConfig('build/p4info.txt','build/bmv2.json')
+                    )
+                    # use p4runtime shell to insert table entry to block ip
+                    te = sh.TableEntry('ingress.table_block')(action='drop')
+                    te.match['user_md.hashed_address'] = str(hash_addr)
+                    te.insert()
+                    sh.teardown()
         # if status != [0, 0, 0, 0]:
         #     if (status[1] == 0 and status[2] == 0 and status[3] == 0):
         #         print("The server is normal running.")

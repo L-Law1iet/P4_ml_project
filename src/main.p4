@@ -143,7 +143,7 @@ control ingress(
 
     table table_block {
         key = {
-            hdr.ipv4.src_addr: exact;
+            user_md.hashed_address: exact;
         }
         actions = {
             drop;
@@ -165,16 +165,15 @@ control ingress(
     user_md.block_flag = 0;
 
     if(hdr.ipv4.isValid()){
-        table_block.apply();
         src_ip = hdr.ipv4.src_addr;
         dst_ip = hdr.ipv4.dst_addr;
-        
         if(st_md.ingress_port == 1){
             compute_server_flow();
         }
         else{
             compute_client_flow();
         }
+        table_block.apply();
 	}
 
 	pkt_counter.read(pkt_counter_value, user_md.hashed_address);
