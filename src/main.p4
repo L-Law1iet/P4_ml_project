@@ -66,8 +66,10 @@ struct mac_learn_digest_t {
     bit<32> hashed_address;
     bit<32> curr_pcaket_length;
     bit<48> curr_interval;
-    bit<8> fin_value;
-    bit<8> syn_value;
+    bit<1> psh_value;
+	bit<1> ack_value;
+    bit<1> fin_value;
+	bit<1> syn_value;
 }
 struct local_metadata_t { 
     bit<32> hashed_address;
@@ -154,8 +156,10 @@ control ingress(
     }
 
     apply {
-    bit<8> fin_value = 0;
-	bit<8> syn_value = 0;
+    bit<1> fin_value = 0;
+	bit<1> syn_value = 0;
+    bit<1> psh_value = 0;
+	bit<1> ack_value = 0;
 	bit<32> pkt_counter_value;
     bit<32> curr_pcaket_length;
     bit<48> last_time;
@@ -190,15 +194,21 @@ control ingress(
 	last_time_reg.write(user_md.hashed_address, st_md.ingress_global_timestamp);
 
 	if(hdr.tcp.isValid()){
-            if (hdr.tcp.flags == 1) {
+            if ((hdr.tcp.ctrl & 0b001000) > 0) {
+                psh_value = 1;
+            }
+            if ((hdr.tcp.ctrl & 0b010000) > 0) {
+                ack_value = 1;
+            }
+            if ((hdr.tcp.ctrl & 0b000001) > 0) {
                 fin_value = 1;
             }
-            if (hdr.tcp.flags == 2) {
+            if ((hdr.tcp.ctrl & 0b000010) > 0) {
                 syn_value = 1;
             }
-        }
-    digest<mac_learn_digest_t>(1, {user_md.hashed_address, src_ip, dst_ip, curr_pcaket_length, curr_interval, fin_value, syn_value});
-    
+    }
+    digest<mac_learn_digest_t>(1, {user_md.hashed_address, curr_pcaket_length, curr_interval, fin_value, syn_value, psh_value, ack_value});
+
     if(user_md.block_flag == 1){
         st_md.egress_spec = 0;
     }

@@ -108,12 +108,10 @@ def show_state(response, lock):
     lock.acquire()
     i = 0
     global flows
-    global curr_hash
     hash_addr = ""
     for state in data:
         if i == 0:
             hash_addr = str(state)
-            curr_hash = state
             if hash_addr not in flows:
                 flows[hash_addr] = {}
                 flows[hash_addr]["first_packet"] = True
@@ -121,10 +119,6 @@ def show_state(response, lock):
             else:
                 flows[hash_addr]["count_packets"] = flows[hash_addr]["count_packets"] + 1
         elif i == 1:
-            flows[hash_addr]["src_addr"] = state
-        elif i == 2:
-            flows[hash_addr]["dst_addr"] = state
-        elif i == 3:
             if flows[hash_addr]["first_packet"] == True:
                 flows[hash_addr]["max_length"] = state
                 flows[hash_addr]["min_length"] = state
@@ -136,7 +130,7 @@ def show_state(response, lock):
                 flows[hash_addr]["count_length"] = flows[hash_addr]["count_length"] + state
             else:
                 flows[hash_addr]["count_length"] = state
-        elif i == 4:
+        elif i == 2:
             if flows[hash_addr]["first_packet"]:
                 flows[hash_addr]["max_iat"] = state
                 flows[hash_addr]["min_iat"] = state
@@ -148,16 +142,26 @@ def show_state(response, lock):
                 flows[hash_addr]["count_iat"] = flows[hash_addr]["count_iat"] + state
             else:
                 flows[hash_addr]["count_iat"] = state
-        elif i == 5:
+        elif i == 3:
             if "count_fin" in flows[hash_addr]:
                 flows[hash_addr]["count_fin"] = flows[hash_addr]["count_fin"] + state
             else:
                 flows[hash_addr]["count_fin"] = state
-        elif i == 6:
+        elif i == 4:
             if "count_syn" in flows[hash_addr]:
                 flows[hash_addr]["count_syn"] = flows[hash_addr]["count_syn"] + state
             else:
                 flows[hash_addr]["count_syn"] = state
+        elif i == 5:
+            if "count_psh" in flows[hash_addr]:
+                flows[hash_addr]["count_psh"] = flows[hash_addr]["count_psh"] + state
+            else:
+                flows[hash_addr]["count_psh"] = state
+        elif i == 6:
+            if "count_ack" in flows[hash_addr]:
+                flows[hash_addr]["count_ack"] = flows[hash_addr]["count_ack"] + state
+            else:
+                flows[hash_addr]["count_ack"] = state
             flows[hash_addr]["first_packet"] = False
         i = i + 1
     lock.release()
@@ -235,7 +239,7 @@ def time_window(lock):
             global loaded_model, scaler, exec_count, time_count
             global curr_hash
             prediction = loaded_model.predict(scaler.transform(
-                np.array([[flows[hash_addr]["count_length"], flows[hash_addr]["count_packets"], flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_length"], flows[hash_addr]["min_length"], flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_iat"], flows[hash_addr]["min_iat"], flows[hash_addr]["count_fin"], flows[hash_addr]["count_syn"]]])))
+                np.array([[flows[hash_addr]["count_length"], flows[hash_addr]["count_packets"], flows[hash_addr]["count_length"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_length"], flows[hash_addr]["min_length"], flows[hash_addr]["count_iat"] / flows[hash_addr]["count_packets"], flows[hash_addr]["max_iat"], flows[hash_addr]["min_iat"], flows[hash_addr]["count_fin"], flows[hash_addr]["count_syn"], flows[hash_addr]["count_psh"], flows[hash_addr]["count_ack"]]])))
             if prediction == [0]:
                 status[0] = status[0] + 1
             # elif prediction == [1]:
